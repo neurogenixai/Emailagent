@@ -1,0 +1,14 @@
+fastapi==0.109.2
+uvicorn==0.27.1
+sqlalchemy==2.0.25
+pydantic==2.6.1
+pydantic-settings==2.1.0
+anthropic==0.19.1
+google-auth==2.27.0
+google-api-python-client==2.116.0
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+apscheduler==3.10.4
+python-multipart==0.0.7
+pandas==2.2.0
+pytz==2024.1
