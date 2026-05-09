@@ -7,6 +7,7 @@ anthropic==0.19.1
 google-auth==2.27.0
 google-api-python-client==2.116.0
 passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
 python-jose[cryptography]==3.3.0
 apscheduler==3.10.4
 python-multipart==0.0.7
