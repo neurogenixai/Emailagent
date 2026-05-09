@@ -10,20 +10,20 @@ RUN npm run build
 # ── Stage 2: Run Python backend + serve built frontend ─────────────────────
 FROM python:3.11-slim
 
-WORKDIR /app
+# Set working directory TO the backend folder directly
+WORKDIR /app/backend
 
-# Copy backend
-COPY backend/ ./backend/
+# Copy backend files into the working directory
+COPY backend/ ./
 
-# Copy the built React app from Stage 1
-COPY --from=frontend-build /app/frontend/dist ./frontend/dist
+# Copy the built React app from Stage 1 into /app/frontend/dist
+COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose Railway's dynamic port
-ENV PORT=8000
-EXPOSE $PORT
+# Expose port
+EXPOSE 8000
 
-# Start the backend (it serves the frontend too)
-CMD ["sh", "-c", "cd /app/backend && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start uvicorn — no cd needed, we're already in /app/backend
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
