@@ -73,12 +73,15 @@ def google_login(payload: GoogleToken, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == email).first()
         
         if not user:
-            # Auto-create user for any valid Google login (or restrict to super_admin_email)
+            # Only auto-create account if they are the designated admin or approver
+            if email not in [settings.super_admin_email, settings.approver_email]:
+                raise HTTPException(status_code=403, detail="Unauthorized: Access denied for this email address")
+                
             user = User(
                 email=email,
                 full_name=full_name,
                 password_hash=str(uuid.uuid4()), # Impossible to login via normal password
-                role="admin" if email in [settings.super_admin_email, settings.approver_email] else "client"
+                role="admin"
             )
             db.add(user)
             db.commit()
