@@ -13,3 +13,4 @@ apscheduler==3.10.4
 python-multipart==0.0.7
 pandas==2.2.0
 pytz==2024.1
+psycopg2-binary==2.9.9
