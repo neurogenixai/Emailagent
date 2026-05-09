@@ -21,6 +21,14 @@ export function AuthProvider({ children }) {
     return data.user
   }, [])
 
+  const loginWithGoogle = useCallback(async (credential) => {
+    const { data } = await api.post('/auth/google', { token: credential })
+    localStorage.setItem('ea_token', data.access_token)
+    localStorage.setItem('ea_user', JSON.stringify(data.user))
+    setUser(data.user)
+    return data.user
+  }, [])
+
   const logout = useCallback(() => {
     localStorage.removeItem('ea_token')
     localStorage.removeItem('ea_user')
@@ -28,7 +36,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   )

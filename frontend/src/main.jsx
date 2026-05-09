@@ -4,9 +4,13 @@ import App from './App'
 import './index.css'
 import { Toaster } from 'react-hot-toast'
 
+import { GoogleOAuthProvider } from '@react-oauth/google'
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
-    <Toaster position="top-right" toastOptions={{ className: 'glass-card text-white' }} />
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <App />
+      <Toaster position="top-right" toastOptions={{ className: 'glass-card text-white' }} />
+    </GoogleOAuthProvider>
   </React.StrictMode>,
 )

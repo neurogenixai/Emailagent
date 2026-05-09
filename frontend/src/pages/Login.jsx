@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { Zap, Mail, Shield, BrainCircuit, BarChart3, ChevronRight, CheckCircle2, TrendingUp, Eye, EyeOff, X, User, Building2, Phone, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api/client'
+import { GoogleLogin } from '@react-oauth/google'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -13,7 +14,7 @@ export default function Login() {
   const [reqLoading, setReqLoading] = useState(false)
   const [reqDone, setReqDone] = useState(false)
   const [reqForm, setReqForm] = useState({ full_name: '', email: '', company_name: '', phone: '', use_case: '' })
-  const { login } = useAuth()
+  const { login, loginWithGoogle } = useAuth()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -197,6 +198,38 @@ export default function Login() {
                 {loading ? 'Authenticating...' : 'Sign In'}
                 {!loading && <ChevronRight size={18} className="opacity-80" />}
               </button>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/10"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-[#161929]/80 text-text-muted">Or continue with</span>
+                </div>
+              </div>
+
+              <div className="flex justify-center mt-4">
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    setLoading(true)
+                    try {
+                      await loginWithGoogle(credentialResponse.credential)
+                      toast.success('Welcome back to Dashboard!')
+                    } catch (error) {
+                      toast.error(error.response?.data?.detail || 'Google Login failed')
+                    } finally {
+                      setLoading(false)
+                    }
+                  }}
+                  onError={() => {
+                    toast.error('Google Login Failed')
+                  }}
+                  theme="filled_black"
+                  size="large"
+                  shape="rectangular"
+                  width="100%"
+                />
+              </div>
             </form>
 
             <div className="mt-8 pt-6 border-t border-white/5 text-center">
