@@ -26,4 +26,4 @@ ENV PORT=8000
 EXPOSE $PORT
 
 # Start the backend (it serves the frontend too)
-CMD uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
