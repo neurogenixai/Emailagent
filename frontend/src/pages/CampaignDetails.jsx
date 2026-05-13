@@ -57,6 +57,18 @@ export default function CampaignDetails() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!window.confirm('Are you absolutely sure? This will delete the campaign, all uploaded leads, and all generated drafts permanently.')) return;
+    
+    try {
+      await api.delete(`/campaigns/${id}`)
+      toast.success('Campaign and all data deleted!')
+      navigate('/campaigns')
+    } catch {
+      toast.error('Failed to delete campaign')
+    }
+  }
+
   const addStep = () => {
     const steps = settings.sequence_steps || []
     setSettings({...settings, sequence_steps: [...steps, { step: steps.length, label: `Follow-up ${steps.length}`, delay_days: steps.length * 3, prompt: '' }]})
@@ -98,12 +110,13 @@ export default function CampaignDetails() {
               <span className="font-semibold">{pendingCount} pending draft{pendingCount > 1 ? 's' : ''} in queue</span>
             </div>
           )}
-          <button
-            className="btn-secondary"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            <Save size={16} /> {saving ? 'Saving…' : 'Save Settings'}
+          <button className="btn-secondary text-red-400 hover:text-red-500 hover:bg-red-400/10 border-red-400/20" onClick={handleDelete}>
+            <Trash2 size={16} /> Delete Campaign
+          </button>
+          
+          <button className="btn-secondary flex items-center gap-2" onClick={handleSave} disabled={saving}>
+            {saving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+            {saving ? 'Saving...' : 'Save Settings'}
           </button>
           <button
             onClick={() => setShowConfirm(true)}
