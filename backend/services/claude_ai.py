@@ -153,14 +153,20 @@ def _generate_email_draft(client, prompt_text: str, step: int) -> dict:
     body = text
 
     # Parse subject
-    subject_match = re.search(r"^SUBJECT:\s*(.+)$", text, re.MULTILINE)
+    subject_match = re.search(r"^(?:SUBJECT|Subject|subject):\s*(.+)$", text, re.MULTILINE)
     if subject_match:
         subject = subject_match.group(1).strip()
+    
+    if not subject:
+        subject = "Quick question"
 
     # Parse body
-    body_match = re.search(r"BODY:\s*\n([\s\S]+)$", text)
+    body_match = re.search(r"^(?:BODY|Body|body):\s*\n?([\s\S]+)$", text, re.MULTILINE)
     if body_match:
         body = body_match.group(1).strip()
+    else:
+        # Fallback if Claude didn't output BODY:
+        body = text.replace(f"SUBJECT: {subject}", "").strip()
 
     return {"subject": subject, "body": body}
 

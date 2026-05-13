@@ -115,14 +115,15 @@ def reject_draft(draft_id: str, db: Session = Depends(get_db), _=Depends(get_cur
 
 @router.post("/regenerate-all")
 def regenerate_all_pending(campaign_id: str, db: Session = Depends(get_db), _=Depends(get_current_user)):
-    """Regenerate ALL pending (unapproved) drafts AND generate drafts for leads with none."""
+    """Regenerate INTRO (step 0) pending drafts only. Follow-ups are generated automatically after each send."""
     from models import Lead
     import threading
 
-    # Part 1: regenerate existing pending drafts
+    # Part 1: regenerate existing INTRO (step 0) pending drafts only
     drafts = db.query(EmailDraft).filter(
         EmailDraft.campaign_id == campaign_id,
-        EmailDraft.approved == False
+        EmailDraft.approved == False,
+        EmailDraft.step == 0,  # Only intro
     ).all()
 
     from services.claude_ai import regenerate_draft, generate_drafts_for_leads
@@ -135,22 +136,25 @@ def regenerate_all_pending(campaign_id: str, db: Session = Depends(get_db), _=De
         except Exception:
             pass
 
-    # Part 2: generate drafts for leads that have NO drafts yet
+    # Part 2: generate INTRO drafts for leads that have NO intro draft yet
     all_lead_ids = [r[0] for r in db.query(Lead.id).filter(Lead.campaign_id == campaign_id).all()]
-    leads_with_drafts = {r[0] for r in db.query(EmailDraft.lead_id).filter(EmailDraft.campaign_id == campaign_id).all()}
-    missing_lead_ids = [lid for lid in all_lead_ids if lid not in leads_with_drafts]
+    leads_with_intro = {r[0] for r in db.query(EmailDraft.lead_id).filter(
+        EmailDraft.campaign_id == campaign_id,
+        EmailDraft.step == 0,
+    ).all()}
+    missing_lead_ids = [lid for lid in all_lead_ids if lid not in leads_with_intro]
 
     if missing_lead_ids:
         try:
-            t = threading.Thread(target=generate_drafts_for_leads, args=(missing_lead_ids, campaign_id), daemon=True)
+            t = threading.Thread(target=generate_drafts_for_leads, args=(missing_lead_ids, campaign_id, [0]), daemon=True)
             t.start()
             queued += len(missing_lead_ids)
         except Exception:
             pass
 
-    total_msg = f"Queued {queued} action(s). Check Approval Queue in ~30 seconds."
+    total_msg = f"Queued {queued} intro draft(s). Follow-up drafts are auto-generated after each send."
     if not queued:
-        total_msg = "No pending drafts or missing drafts found."
+        total_msg = "All intro drafts are already approved or up to date."
     return {"ok": True, "queued": queued, "message": total_msg}
 
 

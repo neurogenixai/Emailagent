@@ -113,6 +113,12 @@ def send_email(sequence_id: str):
         subject = draft.subject or f"Following up — {lead.company_name or 'your company'}"
         body = draft.edited_body or draft.body or ""
 
+        # Replace [Your name] / [Your Name] placeholder with sender's name
+        sender_name = mailbox.display_name or mailbox.email.split("@")[0].replace(".", " ").title()
+        body = body.replace("[Your name]", sender_name)
+        body = body.replace("[Your Name]", sender_name)
+        body = body.replace("[your name]", sender_name)
+
         base_url = settings.backend_url.rstrip("/")
 
         raw_msg = _build_mime_message(
