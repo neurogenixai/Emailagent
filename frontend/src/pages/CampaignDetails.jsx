@@ -255,9 +255,21 @@ export default function CampaignDetails() {
                     : "Write a short follow-up email to {name} who didn't reply. Reference the previous email briefly."
                   }
                 />
-                <p className="text-xs text-text-muted mt-1.5">
-                  Available variables: <span className="font-mono text-orange/80">{'{name}'} {'{company}'} {'{product}'} {'{job_title}'} {'{icp}'}</span>
-                </p>
+                <div className="mt-2 flex flex-wrap gap-2 items-center">
+                  <span className="text-xs text-text-muted">Insert variable:</span>
+                  {['{name}', '{company}', '{product}', '{job_title}', '{icp}'].map(v => (
+                    <button
+                      key={v}
+                      onClick={() => {
+                        const current = s.prompt || '';
+                        updateStep(idx, 'prompt', current + (current && !current.endsWith(' ') ? ' ' : '') + v);
+                      }}
+                      className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-orange/10 border border-orange/20 text-orange hover:bg-orange/20 transition-colors"
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
               </div>
             ))}
             {(!settings.sequence_steps || settings.sequence_steps.length === 0) && (
