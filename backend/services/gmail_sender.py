@@ -181,6 +181,13 @@ def send_email(sequence_id: str):
             if next_step_data:
                 next_step = next_step_data.get("step", current_step + 1)
                 delay_days = next_step_data.get("delay_days", 3)
+
+                # ⚠️ Do NOT schedule follow-up if lead has already replied
+                db.refresh(lead)
+                if lead.status in (LeadStatus.replied, LeadStatus.unsubscribed):
+                    logger.info(f"⏭️ Skipping next step for lead={lead.id[:8]} — already replied/unsubscribed")
+                    return
+
                 # Check if next sequence entry already exists
                 existing_next = db.query(EmailSequence).filter(
                     EmailSequence.lead_id == lead.id,
@@ -194,9 +201,7 @@ def send_email(sequence_id: str):
                         scheduled_at=scheduled_at,
                     ))
                     db.commit()
-                    logger.info(f"📅 Scheduled step {next_step} for lead={lead.id[:8]} in {delay_days} days")
-
-                    # Generate draft for next step in background
+                    logger.info(f"📅 Scheduled step {next_step} for lead={lead.id[:8]} in {delay_days} days — draft pre-generated for early review")
                     from services.claude_ai import generate_drafts_for_leads
                     import threading
                     t = threading.Thread(
