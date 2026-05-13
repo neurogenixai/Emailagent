@@ -85,16 +85,31 @@ def send_email(sequence_id: str):
             db.commit()
             return
 
-        # Get the approved draft
+        # Check if draft exists for this step
         from models import EmailDraft
-        draft = db.query(EmailDraft).filter(
+        any_draft = db.query(EmailDraft).filter(
             EmailDraft.lead_id == lead.id,
             EmailDraft.step == seq.step,
-            EmailDraft.approved == True,
         ).first()
-        if not draft:
-            logger.warning(f"⚠️ No approved draft for lead={lead.id[:8]} step={seq.step} — skipping")
-            return
+
+        if not any_draft:
+            # Draft hasn't been generated yet — it's due today, so generate it NOW
+            logger.info(f"📝 Generating draft for lead={lead.id[:8]} step={seq.step} — due today!")
+            from services.claude_ai import generate_drafts_for_leads
+            import threading
+            t = threading.Thread(
+                target=generate_drafts_for_leads,
+                args=([lead.id], lead.campaign_id, [seq.step]),
+                daemon=True,
+            )
+            t.start()
+            return  # Wait for draft generation + human approval
+
+        if not any_draft.approved:
+            logger.info(f"⏳ Draft awaiting approval for lead={lead.id[:8]} step={seq.step}")
+            return  # Waiting for human to approve in queue
+
+        draft = any_draft
 
         # Pick mailbox
         mailbox = None
@@ -201,15 +216,9 @@ def send_email(sequence_id: str):
                         scheduled_at=scheduled_at,
                     ))
                     db.commit()
-                    logger.info(f"📅 Scheduled step {next_step} for lead={lead.id[:8]} in {delay_days} days — draft pre-generated for early review")
-                    from services.claude_ai import generate_drafts_for_leads
-                    import threading
-                    t = threading.Thread(
-                        target=generate_drafts_for_leads,
-                        args=([lead.id], lead.campaign_id, [next_step]),
-                        daemon=True,
-                    )
-                    t.start()
+                    logger.info(f"📅 Scheduled step {next_step} for lead={lead.id[:8]} in {delay_days} days — draft will be generated on that day")
+                    # ✅ Option B: Do NOT pre-generate the draft here.
+                    # The scheduler will generate it automatically on the scheduled day.
         except Exception as ex:
             logger.warning(f"⚠️ Could not schedule next step: {ex}")
 
