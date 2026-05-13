@@ -50,7 +50,7 @@ def _build_mime_message(
     msg.attach(MIMEText(body, "plain"))
 
     # HTML version with tracking pixel
-    tracking_url = f"{base_url}/track/open/{lead_id}/{step}"
+    tracking_url = f"{base_url}/api/track/open/{lead_id}/{step}"
     html_body = body.replace("\n", "<br>")
     html = (
         f"<html><body>"
