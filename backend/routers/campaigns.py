@@ -125,6 +125,17 @@ def delete_campaign(campaign_id: str, db: Session = Depends(get_db), _=Depends(g
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(404, "Campaign not found")
-    db.delete(c)
-    db.commit()
-    return {"ok": True}
+
+    try:
+        # Manually delete MailboxRotationLog rows (no cascade defined on this table)
+        from models import Lead, MailboxRotationLog
+        lead_ids = [r[0] for r in db.query(Lead.id).filter(Lead.campaign_id == campaign_id).all()]
+        if lead_ids:
+            db.query(MailboxRotationLog).filter(MailboxRotationLog.lead_id.in_(lead_ids)).delete(synchronize_session=False)
+
+        db.delete(c)  # Cascades to leads → sequences, drafts, events
+        db.commit()
+        return {"ok": True, "message": "Campaign and all related data deleted successfully."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"Failed to delete campaign: {str(e)}")
