@@ -109,3 +109,101 @@ def get_lead(lead_id: str, db: Session = Depends(get_db), _=Depends(get_current_
     ]
 
     return data
+
+
+@router.get("/activity/all")
+def leads_activity(
+    campaign_id: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Rich activity table: per-lead open, sent, bounce, reply, not-sent details."""
+    from sqlalchemy import or_
+    from models import SequenceStatus, EventType
+
+    q = db.query(Lead)
+    if current_user.role != "admin":
+        client_campaign_ids = [c.id for c in db.query(Campaign).filter(Campaign.user_id == current_user.id).all()]
+        q = q.filter(Lead.campaign_id.in_(client_campaign_ids))
+    if campaign_id:
+        q = q.filter(Lead.campaign_id == campaign_id)
+    if search:
+        term = f"%{search}%"
+        q = q.filter(or_(
+            Lead.email.ilike(term),
+            Lead.first_name.ilike(term),
+            Lead.last_name.ilike(term),
+            Lead.company_name.ilike(term),
+        ))
+
+    leads = q.order_by(Lead.created_at.desc()).limit(200).all()
+    result = []
+
+    step_labels = {0: "Intro", 1: "Follow-up 1", 2: "Follow-up 2", 3: "Follow-up 3"}
+
+    for lead in leads:
+        # Get all events for this lead
+        events = db.query(EmailEvent).filter(EmailEvent.lead_id == lead.id).all()
+        events_by_type = {}
+        for ev in events:
+            events_by_type.setdefault(str(ev.event_type), []).append(ev)
+
+        # Open events
+        open_events = events_by_type.get("opened", [])
+        first_open = min(open_events, key=lambda e: e.timestamp) if open_events else None
+
+        # Reply events
+        reply_events = events_by_type.get("replied", [])
+        first_reply = min(reply_events, key=lambda e: e.timestamp) if reply_events else None
+
+        # Bounce events
+        bounce_events = events_by_type.get("bounced", [])
+        first_bounce = min(bounce_events, key=lambda e: e.timestamp) if bounce_events else None
+
+        # Per-step sequence data
+        sequences = db.query(EmailSequence).filter(EmailSequence.lead_id == lead.id).order_by(EmailSequence.step).all()
+        steps_data = []
+        for seq in sequences:
+            # Find the sent event for this step
+            sent_ev = next(
+                (e for e in events_by_type.get("sent", [])
+                 if e.metadata_ and str(e.metadata_.get("step")) == str(seq.step)),
+                None
+            )
+            steps_data.append({
+                "step": seq.step,
+                "label": step_labels.get(seq.step, f"Step {seq.step}"),
+                "status": seq.status,
+                "scheduled_at": seq.scheduled_at.isoformat() if seq.scheduled_at else None,
+                "sent_at": seq.sent_at.isoformat() if seq.sent_at else None,
+                "from_mailbox": seq.from_mailbox,
+                "failed_reason": (seq.status == "failed") and "Send error — check mailbox connection" or None,
+            })
+
+        result.append({
+            "id": lead.id,
+            "full_name": f"{lead.first_name or ''} {lead.last_name or ''}".strip() or lead.email,
+            "email": lead.email,
+            "company_name": lead.company_name or "—",
+            "job_title": lead.job_title or "—",
+            "status": lead.status,
+            "campaign_id": lead.campaign_id,
+            "created_at": lead.created_at.isoformat() if lead.created_at else None,
+            # Open tracking
+            "opened": bool(open_events),
+            "opened_at": first_open.timestamp.isoformat() if first_open else None,
+            "open_count": len(open_events),
+            # Reply tracking
+            "replied": bool(reply_events),
+            "replied_at": first_reply.timestamp.isoformat() if first_reply else None,
+            # Bounce tracking
+            "bounced": bool(bounce_events),
+            "bounced_at": first_bounce.timestamp.isoformat() if first_bounce else None,
+            "bounce_reason": first_bounce.metadata_.get("reason", "") if first_bounce and first_bounce.metadata_ else None,
+            # Per-step breakdown
+            "steps": steps_data,
+        })
+
+    return {"leads": result, "total": len(result)}
+
