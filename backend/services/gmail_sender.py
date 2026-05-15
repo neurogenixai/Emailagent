@@ -33,6 +33,7 @@ def _get_gmail_service(refresh_token: str):
 
 def _build_mime_message(
     from_email: str,
+    from_name: str,
     to_email: str,
     subject: str,
     body: str,
@@ -42,23 +43,28 @@ def _build_mime_message(
 ) -> str:
     """Build MIME email with tracking pixel embedded."""
     msg = MIMEMultipart("alternative")
-    msg["From"] = from_email
+    # Set proper From with display name so it shows as "Jay Rwaltz <jay@rwaltz.services>"
+    msg["From"] = f"{from_name} <{from_email}>" if from_name else from_email
     msg["To"] = to_email
     msg["Subject"] = subject
 
     # Plain text fallback
-    msg.attach(MIMEText(body, "plain"))
+    msg.attach(MIMEText(body, "plain", "utf-8"))
 
     # HTML version with tracking pixel
+    # NOTE: Do NOT use style="display:none" — Gmail strips it and may skip loading the pixel
+    # Use width/height=1 and no style attribute for maximum compatibility
     tracking_url = f"{base_url}/api/track/open/{lead_id}/{step}"
     html_body = body.replace("\n", "<br>")
     html = (
-        f"<html><body>"
-        f"<p>{html_body}</p>"
-        f'<img src="{tracking_url}" width="1" height="1" style="display:none;" />'
+        f"<html><head><meta charset='UTF-8'></head><body>"
+        f"<div style='font-family:Arial,sans-serif;font-size:14px;line-height:1.6;'>"
+        f"{html_body}"
+        f"</div>"
+        f"<img src='{tracking_url}' width='1' height='1' border='0' alt='' />"
         f"</body></html>"
     )
-    msg.attach(MIMEText(html, "html"))
+    msg.attach(MIMEText(html, "html", "utf-8"))
 
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     return raw
@@ -138,6 +144,7 @@ def send_email(sequence_id: str):
 
         raw_msg = _build_mime_message(
             from_email=mailbox.email,
+            from_name=sender_name,
             to_email=lead.email,
             subject=subject,
             body=body,
