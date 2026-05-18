@@ -21,7 +21,9 @@ const STEP_STATUS_CONFIG = {
 function fmt(iso) {
   if (!iso) return '—'
   const d = new Date(iso)
-  return d.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const ist = d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const est = d.toLocaleString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })
+  return `${ist} IST (${est})`
 }
 
 function fmtDate(iso) {
