@@ -40,6 +40,7 @@ def _build_mime_message(
     lead_id: str,
     step: int,
     base_url: str,
+    sender_company: str = "",
 ) -> str:
     """Build MIME email with tracking pixel embedded."""
     msg = MIMEMultipart("alternative")
@@ -56,12 +57,32 @@ def _build_mime_message(
     # Use width/height=1 and no style attribute for maximum compatibility
     tracking_url = f"{base_url}/api/track/open/{lead_id}/{step}"
     html_body = body.replace("\n", "<br>")
+    # Build the official-looking signature
+    initial = from_name[0].upper() if from_name else "S"
+    signature_html = f"""
+    <br><br>
+    <table cellpadding="0" cellspacing="0" style="border-collapse: collapse; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px; width: 100%; max-width: 400px;">
+      <tr>
+        <td style="padding-right: 15px; border-right: 2px solid #e2e8f0; width: 45px;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background-color: #f1f5f9; text-align: center; line-height: 40px; font-size: 18px; font-weight: bold; color: #475569;">
+            {initial}
+          </div>
+        </td>
+        <td style="padding-left: 15px;">
+          <p style="margin: 0; font-size: 15px; font-weight: 600; color: #0f172a;">{from_name}</p>
+          <p style="margin: 3px 0 0; font-size: 13px; color: #64748b;">{sender_company}</p>
+        </td>
+      </tr>
+    </table>
+    """
+
     html = (
         f"<html><head><meta charset='UTF-8'></head><body>"
-        f"<div style='font-family:Arial,sans-serif;font-size:14px;line-height:1.6;'>"
+        f"<div style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.6;color:#333;'>"
         f"{html_body}"
         f"</div>"
-        f"<img src='{tracking_url}' width='1' height='1' border='0' alt='' />"
+        f"{signature_html}"
+        f"<img src='{tracking_url}' width='1' height='1' border='0' alt='' style='display:block;' />"
         f"</body></html>"
     )
     msg.attach(MIMEText(html, "html", "utf-8"))
@@ -141,6 +162,11 @@ def send_email(sequence_id: str):
         body = body.replace("[your name]", sender_name)
 
         base_url = settings.backend_url.rstrip("/")
+        
+        # Get company name from campaign settings
+        from models import Campaign
+        campaign = db.query(Campaign).filter(Campaign.id == lead.campaign_id).first()
+        sender_company = campaign.settings.get("product_name", "Our Company") if campaign and campaign.settings else "Our Company"
 
         raw_msg = _build_mime_message(
             from_email=mailbox.email,
@@ -151,6 +177,7 @@ def send_email(sequence_id: str):
             lead_id=lead.id,
             step=seq.step,
             base_url=base_url,
+            sender_company=sender_company,
         )
 
         service.users().messages().send(userId="me", body={"raw": raw_msg}).execute()
