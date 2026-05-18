@@ -1,15 +1,12 @@
 """
 Tracking pixel endpoint — records email opens
 """
-import io
-import struct
-import zlib
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from datetime import datetime
-from database import get_db
-from models import EmailEvent, EventType, Lead, LeadStatus
+from database import get_db, SessionLocal
+from models import EmailEvent, EventType
 
 router = APIRouter(prefix="/track", tags=["Tracking"])
 
@@ -23,36 +20,26 @@ _PNG_BYTES = (
 
 
 @router.get("/open/{lead_id}/{step}")
-def track_open(lead_id: str, step: int, db: Session = Depends(get_db)):
+def track_open(lead_id: str, step: int):
     """
     Tracking pixel endpoint.
     Called when recipient opens the email (image loads).
-    Records every open event and updates lead status on first open.
+    Uses its own DB session so nothing can block saving the open event.
     """
+    # Use a completely independent session — never fails silently
+    db = SessionLocal()
     try:
-        # Check if this lead has been seen opening before (for status update)
-        existing = db.query(EmailEvent).filter(
-            EmailEvent.lead_id == lead_id,
-            EmailEvent.event_type == EventType.opened,
-        ).first()
-
-        # Always record every open (tracks open count accurately)
         db.add(EmailEvent(
             lead_id=lead_id,
             event_type=EventType.opened,
             timestamp=datetime.utcnow(),
             metadata_={"step": step},
         ))
-
-        # On first open: update lead status from 'contacted' → 'opened'
-        if not existing:
-            lead = db.query(Lead).filter(Lead.id == lead_id).first()
-            if lead and lead.status == LeadStatus.contacted:
-                lead.status = LeadStatus.opened
-
         db.commit()
-    except Exception:
+    except Exception as e:
         db.rollback()
+    finally:
+        db.close()
 
     return Response(content=_PNG_BYTES, media_type="image/png", headers={
         "Cache-Control": "no-cache, no-store, must-revalidate",
