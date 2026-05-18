@@ -176,8 +176,8 @@ def leads_activity(
                 "step": seq.step,
                 "label": step_labels.get(seq.step, f"Step {seq.step}"),
                 "status": seq.status,
-                "scheduled_at": seq.scheduled_at.isoformat() if seq.scheduled_at else None,
-                "sent_at": seq.sent_at.isoformat() if seq.sent_at else None,
+                "scheduled_at": seq.scheduled_at.isoformat() + "Z" if seq.scheduled_at else None,
+                "sent_at": seq.sent_at.isoformat() + "Z" if seq.sent_at else None,
                 "from_mailbox": seq.from_mailbox,
                 "failed_reason": (seq.status == "failed") and "Send error — check mailbox connection" or None,
             })
@@ -190,17 +190,17 @@ def leads_activity(
             "job_title": lead.job_title or "—",
             "status": lead.status,
             "campaign_id": lead.campaign_id,
-            "created_at": lead.created_at.isoformat() if lead.created_at else None,
+            "created_at": lead.created_at.isoformat() + "Z" if lead.created_at else None,
             # Open tracking
             "opened": bool(open_events),
-            "opened_at": first_open.timestamp.isoformat() if first_open else None,
+            "opened_at": first_open.timestamp.isoformat() + "Z" if first_open else None,
             "open_count": len(open_events),
             # Reply tracking
             "replied": bool(reply_events),
-            "replied_at": first_reply.timestamp.isoformat() if first_reply else None,
+            "replied_at": first_reply.timestamp.isoformat() + "Z" if first_reply else None,
             # Bounce tracking
             "bounced": bool(bounce_events),
-            "bounced_at": first_bounce.timestamp.isoformat() if first_bounce else None,
+            "bounced_at": first_bounce.timestamp.isoformat() + "Z" if first_bounce else None,
             "bounce_reason": first_bounce.metadata_.get("reason", "") if first_bounce and first_bounce.metadata_ else None,
             # Per-step breakdown
             "steps": steps_data,
