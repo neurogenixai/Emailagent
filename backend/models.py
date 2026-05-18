@@ -34,9 +34,11 @@ class AccessRequestStatus(str, enum.Enum):
 class LeadStatus(str, enum.Enum):
     new = "new"
     contacted = "contacted"
+    opened = "opened"
     replied = "replied"
     bounced = "bounced"
     unsubscribed = "unsubscribed"
+
 
 
 class SequenceStatus(str, enum.Enum):

@@ -5,10 +5,12 @@ import { Search, ChevronDown, ChevronRight, Mail, Eye, MessageSquare, AlertTrian
 const STATUS_CONFIG = {
   new:           { color: 'text-text-muted',    bg: 'bg-white/5',        label: 'New' },
   contacted:     { color: 'text-blue-400',       bg: 'bg-blue-400/10',    label: 'Contacted' },
+  opened:        { color: 'text-purple-400',     bg: 'bg-purple-400/10',  label: 'Opened 👀' },
   replied:       { color: 'text-green-400',      bg: 'bg-green-400/10',   label: 'Replied ✅' },
   bounced:       { color: 'text-red-400',        bg: 'bg-red-400/10',     label: 'Bounced ⛔' },
   unsubscribed:  { color: 'text-orange-400',     bg: 'bg-orange-400/10',  label: 'Unsubscribed' },
 }
+
 
 const STEP_STATUS_CONFIG = {
   pending:  { icon: <Clock size={12}/>,        color: 'text-text-muted',  label: 'Scheduled' },
