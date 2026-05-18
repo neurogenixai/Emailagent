@@ -143,11 +143,12 @@ def leads_activity(
     step_labels = {0: "Intro", 1: "Follow-up 1", 2: "Follow-up 2", 3: "Follow-up 3"}
 
     for lead in leads:
-        # Get all events for this lead
         events = db.query(EmailEvent).filter(EmailEvent.lead_id == lead.id).all()
         events_by_type = {}
         for ev in events:
-            events_by_type.setdefault(str(ev.event_type), []).append(ev)
+            # SQLAlchemy Enum column returns the Enum instance. We need its string value.
+            event_key = ev.event_type.value if hasattr(ev.event_type, "value") else str(ev.event_type).replace("EventType.", "")
+            events_by_type.setdefault(event_key, []).append(ev)
 
         # Open events
         open_events = events_by_type.get("opened", [])
